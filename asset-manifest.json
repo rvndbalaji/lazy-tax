@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/lazy-tax/static/css/main.6e82699c.chunk.css",
+    "main.js": "/lazy-tax/static/js/main.972baccb.chunk.js",
+    "main.js.map": "/lazy-tax/static/js/main.972baccb.chunk.js.map",
+    "runtime-main.js": "/lazy-tax/static/js/runtime-main.781c73f2.js",
+    "runtime-main.js.map": "/lazy-tax/static/js/runtime-main.781c73f2.js.map",
+    "static/css/2.4c97ca4f.chunk.css": "/lazy-tax/static/css/2.4c97ca4f.chunk.css",
+    "static/js/2.da3e64e3.chunk.js": "/lazy-tax/static/js/2.da3e64e3.chunk.js",
+    "static/js/2.da3e64e3.chunk.js.map": "/lazy-tax/static/js/2.da3e64e3.chunk.js.map",
+    "static/js/3.0f03f253.chunk.js": "/lazy-tax/static/js/3.0f03f253.chunk.js",
+    "static/js/3.0f03f253.chunk.js.map": "/lazy-tax/static/js/3.0f03f253.chunk.js.map",
+    "index.html": "/lazy-tax/index.html",
+    "static/css/2.4c97ca4f.chunk.css.map": "/lazy-tax/static/css/2.4c97ca4f.chunk.css.map",
+    "static/css/main.6e82699c.chunk.css.map": "/lazy-tax/static/css/main.6e82699c.chunk.css.map",
+    "static/js/2.da3e64e3.chunk.js.LICENSE.txt": "/lazy-tax/static/js/2.da3e64e3.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.781c73f2.js",
+    "static/css/2.4c97ca4f.chunk.css",
+    "static/js/2.da3e64e3.chunk.js",
+    "static/css/main.6e82699c.chunk.css",
+    "static/js/main.972baccb.chunk.js"
+  ]
+}
