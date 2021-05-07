@@ -1,1 +1,1 @@
-# lazy-tax
+## Lazy Tax - For those who are bad at math
