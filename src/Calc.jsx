@@ -26,7 +26,17 @@ class Calc extends React.Component
                 s1 : 0,
                 s2 : 0,
                 s3 : 0,
-                s4 : 0
+                s4 : 0,
+                cess : 0
+            },
+            newscheme : {
+                s1 : 0,
+                s2 : 0,
+                s3 : 0,
+                s4 : 0,
+                s5 : 0,
+                s6 : 0,
+                cess : 0
             }
         }
     }
@@ -100,34 +110,89 @@ class Calc extends React.Component
     getRentDeduction()
     {
         if(this.state.rent===0) return 0;
-        let b = (50/100) * Number(this.state.basic);
-        let c = Number(this.state.rent) - ((10/100) * Number(this.state.basic))
+        let b = (50.0/100.0) * Number(this.state.basic);
+        let c = Number(this.state.rent) - ((10.0/100.0) * Number(this.state.basic))
         let ded =  Number(Math.min(this.state.hra, b, c));
         return ded;
     }
 
     getEmployeePF()
     {
-        return Number((12/100) * this.state.basic);
+        return Number((12.0/100.0) * this.state.basic);
     }
     
-    getTotalTaxableIncome()
-    {
-        let taxable = this.getGrossAnnualSalary() - this.getTotalDeductions();
-        if(taxable <=0) return 0;
-        return taxable;
-    }
-
     calculateSlabTax(remaining, slab_range, tax_rate)
     {
-       if(remaining >=slab_range) return slab_range * (tax_rate/100);
-       else return remaining * (tax_rate/100);
+       if(remaining > slab_range) return slab_range * (tax_rate/100.0);
+       else return remaining * (tax_rate/100.0);
+    }
+
+    calculateNewSchemeTax()
+    {
+        let totaltaxable = this.getGrossAnnualSalary();
+    
+         //Tax rebate if totaltaxable is 7L or less
+         if(totaltaxable <= 700000) totaltaxable = 0
+
+        //Standard Deduction of 52,500 rupees if totalTaxable exceeds 15L
+        if(totaltaxable >= 1500000) 
+            totaltaxable = totaltaxable - 52500.0
+
+        let slab1 = this.calculateSlabTax(totaltaxable, 300000, 0);
+        let rem1 = totaltaxable - 300000;
+        if(rem1 <=0) rem1 = 0;
+
+        let slab2 = this.calculateSlabTax(rem1,300000, 5);
+        let rem2 = rem1 - 300000;
+        if(rem2 <=0) rem2 = 0;
+
+        let slab3= this.calculateSlabTax(rem2,300000, 10);
+        let rem3 = rem2 - 300000;
+        if(rem3 <=0) rem3 = 0;
+
+        let slab4= this.calculateSlabTax(rem3,300000, 15);
+        let rem4 = rem3 - 300000;
+        if(rem4 <=0) rem4 = 0;
+
+        let slab5= this.calculateSlabTax(rem4,300000, 20);
+        let rem5 = rem4 - 300000;
+        if(rem5 <=0) rem5 = 0;
+
+        let slab6 = this.calculateSlabTax(rem5, rem5, 30);
+        let cess = (4.0/100.0) * (slab1 + slab2 + slab3 + slab4 + slab5 + slab6);
+        let final = {
+            's1' : Number(slab1),
+            's2' : Number(slab2),
+            's3' : Number(slab3),
+            's4' : Number(slab4),
+            's5' : Number(slab5),
+            's6' : Number(slab6),
+            'cess' : Number(cess),
+            'totaltax' : Number(slab1 + slab2 + slab3 + slab4 + slab5 + slab6 + cess)
+        }
+
+        let oldie = JSON.stringify(this.state.newscheme);
+        let finaly = JSON.stringify(final);
+        
+        if(oldie!==finaly)
+        {
+            this.setState(
+                {
+                    ...this.state,
+                    'newscheme' : final
+                });
+        }
     }
 
     calculateOldSchemeTax()
     {
-        let totaltaxable = this.getTotalTaxableIncome();
+        let totalrebate = 0;
+        let totaltaxable = this.getGrossAnnualSalary() - this.getTotalDeductions();
 
+        //Tax rebate upto 12,500 if taxable income is less than or equal 5L
+        if(totaltaxable <= 500000) totalrebate = totalrebate + 12500
+
+        if(totaltaxable <=0) totaltaxable = 0
         let slab1 = this.calculateSlabTax(totaltaxable, 250000, 0);
         let rem1 = totaltaxable - 250000;
         if(rem1 <=0) rem1 = 0;
@@ -136,20 +201,22 @@ class Calc extends React.Component
         let rem2 = rem1 - 250000;
         if(rem2 <=0) rem2 = 0;
 
-        let slab3= this.calculateSlabTax(rem1,500000, 20);
+        let slab3= this.calculateSlabTax(rem2,500000, 20);
         let rem3 = rem2 - 500000;
         if(rem3 <=0) rem3 = 0;
 
         let slab4 = this.calculateSlabTax(rem3, rem3, 30);
-        let cess = (4/100) * (slab1 + slab2 + slab3 + slab4);
+        let total_tax = (slab1 + slab2 + slab3 + slab4) - totalrebate;
+        if(total_tax <= 0) total_tax = 0
+        let cess = (4.0/100.0) * total_tax;
         let final = {
             's1' : Number(slab1),
             's2' : Number(slab2),
             's3' : Number(slab3),
             's4' : Number(slab4),
-            'totaltax' : Number(slab1 + slab2 + slab3 + slab4 + cess)
+            'cess' : Number(cess),
+            'totaltax' : Number(total_tax + cess)
         }
-
         let oldie = JSON.stringify(this.state.oldscheme);
         let finaly = JSON.stringify(final);
         
@@ -168,11 +235,15 @@ class Calc extends React.Component
         
         let gross_annual_salary = <h5>Annual Gross Salary :<b>₹ {this.formatIndian(Number(this.getGrossAnnualSalary()))}</b></h5>;
         let employee_pf = this.getEmployeePF();
-        let total_deductions = <h5>Total Deductions : <b>₹ {this.formatIndian(Number(this.getTotalDeductions()))}</b></h5> 
+        let old_total_deductions = <h5>Total Deductions : <b>₹ {this.formatIndian(Number(this.getTotalDeductions()))}</b></h5> 
         let eightyc = this.getFormattedEightyCDeductions();
-        let totaltaxable = <h5><b>Total Taxable Income : ₹ {this.formatIndian(Number(this.getTotalTaxableIncome()))}</b></h5>;
+        let old_totaltaxable = <h5><b>Total Taxable Income : ₹ {this.formatIndian(Number(this.getGrossAnnualSalary() - this.getTotalDeductions()))}</b></h5>;
+        let new_totaltaxable = <h5><b>Total Taxable Income : ₹ {this.formatIndian(Number(this.getGrossAnnualSalary()))}</b></h5>;
+        let new_std_ded = (this.getGrossAnnualSalary() >= 1500000)? 52500 :0;
+        let new_total_deductions = <h5>Total Deductions : <b>₹ {this.formatIndian(Number(new_std_ded))}</b></h5> 
 
         this.calculateOldSchemeTax();
+        this.calculateNewSchemeTax();
         return (
             <div>
                 <Banner></Banner>
@@ -182,7 +253,7 @@ class Calc extends React.Component
                             <Form action="#">
                                 <Form.Group controlId="basicSalary">
                                     <Form.Label>Basic Salary</Form.Label>
-                                    <Form.Control type="number" placeholder="Annual Basic Salary" value={this.state.basic} onChange={(e)=> {this.update('basic',e.target.value); }}/>
+                                    <Form.Control type="number" placeholder="Annual Basic Salary" value={this.state.basic} onChange={(e)=> {this.update('basic',e.target.value); }} onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Your annual basic salary</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -191,7 +262,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="hra">
                                     <Form.Label>Housing Allowance</Form.Label>
-                                    <Form.Control type="number" placeholder="Annual HRA" value={this.state.hra} onChange={(e)=> {this.update('hra',e.target.value)}} />
+                                    <Form.Control type="number" placeholder="Annual HRA" value={this.state.hra} onChange={(e)=> {this.update('hra',e.target.value)}} onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Annual HRA your company provides</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -200,7 +271,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="otherAllowance">
                                     <Form.Label>Other Allowances/Bonuses</Form.Label>
-                                    <Form.Control type="number" placeholder="Other allowances" value={this.state.other} onChange={(e)=> {this.update('other',e.target.value)}}/>
+                                    <Form.Control type="number" placeholder="Other allowances" value={this.state.other} onChange={(e)=> {this.update('other',e.target.value)}}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Add up your other allowances/bonuses provided annually</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -227,7 +298,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="ELSS">
                                     <Form.Label>ELSS Funds (80C)</Form.Label>
-                                    <Form.Control type="number" value={this.state.elss} onChange={(e)=>this.update('elss',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.elss} onChange={(e)=>this.update('elss',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Total invested amount for the year</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -236,7 +307,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="lic">
                                     <Form.Label>Life Insurance (80C)</Form.Label>
-                                    <Form.Control type="number" value={this.state.lic} onChange={(e)=>this.update('lic',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.lic} onChange={(e)=>this.update('lic',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Total insurance premium paid for the year</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -245,7 +316,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="pghomeloan">
                                     <Form.Label>Principal Home Loan(80C)</Form.Label>
-                                    <Form.Control type="number" value={this.state.phomeloan} onChange={(e)=>this.update('phomeloan',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.phomeloan} onChange={(e)=>this.update('phomeloan',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Principal portion of the EMI paid for home loan</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -254,7 +325,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="fd">
                                     <Form.Label>Tax-Saving FD (80C)</Form.Label>
-                                    <Form.Control type="number" value={this.state.fd} onChange={(e)=>this.update('fd',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.fd} onChange={(e)=>this.update('fd',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Total investment in Tax Saving FD for 5y</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -263,7 +334,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="other">
                                     <Form.Label>Other 80C Deductions</Form.Label>
-                                    <Form.Control type="number" value={this.state.othereightyc}  onChange={(e)=>this.update('othereightyc',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.othereightyc}  onChange={(e)=>this.update('othereightyc',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Total investment in other 80c deductions not declared here</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -297,7 +368,7 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="rent">
                                     <Form.Label>House Rent (10 - 13A)</Form.Label>
-                                    <Form.Control type="number" value={this.state.rent} onChange={(e)=>this.update('rent',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.rent} onChange={(e)=>this.update('rent',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Yearly rent (Non-metro). Specifiy 0 if not in rented house</Form.Text>
                                 </Form.Group>
                             </Form>
@@ -306,29 +377,21 @@ class Calc extends React.Component
                             <Form>
                                 <Form.Group controlId="otherded">
                                     <Form.Label>Other Deductions</Form.Label>
-                                    <Form.Control type="number" value={this.state.otherded} onChange={(e)=>this.update('otherded',e.target.value)}/>
+                                    <Form.Control type="number" value={this.state.otherded} onChange={(e)=>this.update('otherded',e.target.value)}  onWheel={(e) => e.target.blur()}/>
                                     <Form.Text className="text-muted">Ex. Meal coupons or ANY other deduction</Form.Text>
                                 </Form.Group>
                             </Form>
                         </Col>
                     </Row>
                     <br/>
-                    <Row>
-                        <Col>{total_deductions}</Col>
-                    </Row>
                 </Container>
                 
                 <br/><br/>
                 <hr/>
-                <Container>
-                    <Row>
-                        <Col>{totaltaxable}</Col>
-                    </Row>
-                </Container>
-                <hr></hr>
-                <br/><br/>
                 <Container fluid>
                 <h5 align="left">Tax Calculation (Old Regime)</h5> 
+                    {old_totaltaxable}
+                    {old_total_deductions}
                     <br/>
                     <Row>
                         <Table striped bordered hover size="sm">
@@ -361,6 +424,11 @@ class Calc extends React.Component
                                     <td>₹ {this.formatIndian(this.state.oldscheme.s4)}</td>
                                 </tr>
                                 <tr>
+                                    <td>Cess</td>
+                                    <td>4% on Tax</td>
+                                    <td>₹ {this.formatIndian(this.state.oldscheme.cess)}</td>
+                                </tr>
+                                <tr>
                                     <th colSpan="2">TOTAL TAX TO BE PAID THIS YEAR</th>
                                     <th>₹ {this.formatIndian(this.state.oldscheme.totaltax)}</th>
                                 </tr>
@@ -373,9 +441,69 @@ class Calc extends React.Component
                     </Row>
                 </Container>
                 <br/><br/>
-                <Container>
-
+                <Container fluid>
+                <h5 align="left">Tax Calculation (New Regime)</h5> 
+                {new_totaltaxable}
+                {new_total_deductions}
+                    <br/>
+                    <Row>
+                        <Table striped bordered hover size="sm">
+                            <thead>
+                                <tr>
+                                <th>Slab</th>
+                                <th>Tax Rate</th>
+                                <th>Tax Payable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>0 to ₹3,00,000</td>
+                                    <td>0%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s1)}</td>
+                                </tr>
+                                <tr>
+                                    <td>₹3,00,000 to ₹6,00,000	</td>
+                                    <td>5%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s2)}</td>
+                                </tr>
+                                <tr>
+                                    <td>₹6,00,001 to ₹9,00,000</td>
+                                    <td>10%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s3)}</td>
+                                </tr>
+                                <tr>
+                                    <td>₹9,00,001 to ₹12,00,000</td>
+                                    <td>15%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s4)}</td>
+                                </tr>
+                                <tr>
+                                    <td>₹12,00,001 to ₹15,00,000</td>
+                                    <td>20%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s5)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Above ₹15,00,000</td>
+                                    <td>30%</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.s6)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Cess</td>
+                                    <td>4% on Tax</td>
+                                    <td>₹ {this.formatIndian(this.state.newscheme.cess)}</td>
+                                </tr>
+                                <tr>
+                                    <th colSpan="2">TOTAL TAX TO BE PAID THIS YEAR</th>
+                                    <th>₹ {this.formatIndian(this.state.newscheme.totaltax)}</th>
+                                </tr>
+                                <tr>
+                                    <th colSpan="2">TOTAL TAX TO BE PAID PER MONTH</th>
+                                    <th>₹ {this.formatIndian(this.state.newscheme.totaltax/12)}</th>
+                                </tr>
+                            </tbody>
+                        </Table>
+                    </Row>
                 </Container>
+                <br /><br />
             </div>
         )
     }

@@ -11,6 +11,7 @@ class Banner extends React.Component
             <Container>
               <h1>Lazy Tax</h1>
               <p>Tax calculator - because you're bad at math</p>
+              <i>FY 2023 - 2024</i>
             </Container>
             <span id="myname">- Aravind Balaji, {new Date().getFullYear()}</span>
           </Jumbotron>
