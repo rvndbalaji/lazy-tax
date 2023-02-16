@@ -134,9 +134,8 @@ class Calc extends React.Component
          //Tax rebate if totaltaxable is 7L or less
          if(totaltaxable <= 700000) totaltaxable = 0
 
-        //Standard Deduction of 52,500 rupees if totalTaxable exceeds 15L
-        if(totaltaxable >= 1500000) 
-            totaltaxable = totaltaxable - 52500.0
+        //Standard Deduction of 50,000
+        totaltaxable = totaltaxable - 50000.0
 
         let slab1 = this.calculateSlabTax(totaltaxable, 300000, 0);
         let rem1 = totaltaxable - 300000;
@@ -239,8 +238,7 @@ class Calc extends React.Component
         let eightyc = this.getFormattedEightyCDeductions();
         let old_totaltaxable = <h5><b>Total Taxable Income : ₹ {this.formatIndian(Number(this.getGrossAnnualSalary() - this.getTotalDeductions()))}</b></h5>;
         let new_totaltaxable = <h5><b>Total Taxable Income : ₹ {this.formatIndian(Number(this.getGrossAnnualSalary()))}</b></h5>;
-        let new_std_ded = (this.getGrossAnnualSalary() >= 1500000)? 52500 :0;
-        let new_total_deductions = <h5>Total Deductions : <b>₹ {this.formatIndian(Number(new_std_ded))}</b></h5> 
+        let new_total_deductions = <h5>Total Deductions : <b>₹ {this.formatIndian(Number(50000))}</b></h5> 
 
         this.calculateOldSchemeTax();
         this.calculateNewSchemeTax();
