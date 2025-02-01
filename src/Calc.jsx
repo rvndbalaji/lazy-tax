@@ -29,35 +29,128 @@ class Calc extends React.Component {
         rem5: 0,
         rem6: 0,
         cess: 0,
+        totaltax: 0,
       },
     };
+
+    this.TAX_SLABS = [
+      { limit: 400000, rate: 0 },
+      { limit: 400000, rate: 5 },
+      { limit: 400000, rate: 10 },
+      { limit: 400000, rate: 15 },
+      { limit: 400000, rate: 20 },
+      { limit: 400000, rate: 25 },
+      { limit: Infinity, rate: 30 },
+    ];
+
+    this.STANDARD_DEDUCTION = 75000;
+    this.CESS_RATE = 0.04;
   }
 
   componentDidMount() {
     let taxstring = localStorage.getItem("com.rvnd.lazytax:taxstate");
     if (taxstring != null) {
       let taxstate = JSON.parse(taxstring);
-      this.setState({
-        ...taxstate,
+      this.setState(taxstate, () => {
+        this.updateNewSchemeTax();
       });
-    } else localStorage.removeItem("com.rvnd.lazytax:taxstate");
+    } else {
+      localStorage.removeItem("com.rvnd.lazytax:taxstate");
+    }
   }
 
-  update(field, value) {
-    this.setState({
-      ...this.state,
-      [field]: value,
-    });
-    localStorage.setItem(
-      "com.rvnd.lazytax:taxstate",
-      JSON.stringify({
-        ...this.state,
+  update = (field, value) => {
+    this.setState(
+      {
         [field]: value,
-      })
+      },
+      () => {
+        this.updateNewSchemeTax();
+        localStorage.setItem(
+          "com.rvnd.lazytax:taxstate",
+          JSON.stringify(this.state)
+        );
+      }
     );
-  }
+  };
+
+  getGrossAnnualSalary = () => {
+    return (
+      Number(this.state.basic) +
+      Number(this.state.hra) +
+      Number(this.state.other)
+    );
+  };
+
+  getEmployeePF = () => {
+    return Number((12.0 / 100.0) * this.state.basic);
+  };
+
+  calculateNewSchemeTax = (grossAnnualSalary) => {
+    let taxableIncome = grossAnnualSalary;
+
+    // No tax up to 12L - Full rebate
+    if (taxableIncome <= 1200000) {
+      return {
+        totaltax: 0,
+        slabs: this.TAX_SLABS.map(() => ({ taxAmount: 0, remainder: 0 })),
+        cess: 0,
+      };
+    }
+
+    // Apply standard deduction
+    taxableIncome -= this.STANDARD_DEDUCTION;
+
+    let remainingIncome = taxableIncome;
+    let totalTax = 0;
+    let slabs = [];
+
+    for (let slab of this.TAX_SLABS) {
+      let taxableAmount = Math.min(remainingIncome, slab.limit);
+      let taxForSlab = (taxableAmount * slab.rate) / 100;
+
+      totalTax += taxForSlab;
+      remainingIncome -= taxableAmount;
+
+      slabs.push({
+        taxAmount: taxForSlab,
+        remainder: remainingIncome,
+      });
+
+      if (remainingIncome <= 0) break;
+    }
+
+    let cess = totalTax * this.CESS_RATE;
+    totalTax += cess;
+
+    return {
+      totaltax: totalTax,
+      slabs: slabs,
+      cess: cess,
+    };
+  };
+
+  updateNewSchemeTax = () => {
+    const result = this.calculateNewSchemeTax(this.getGrossAnnualSalary());
+
+    const newScheme = {
+      ...result.slabs.reduce(
+        (acc, slab, index) => ({
+          ...acc,
+          [`s${index + 1}`]: slab.taxAmount,
+          [`rem${index + 1}`]: slab.remainder,
+        }),
+        {}
+      ),
+      cess: result.cess,
+      totaltax: result.totaltax,
+    };
+
+    this.setState({ newscheme: newScheme });
+  };
 
   formatIndian(number) {
+    if (!number) return 0;
     number = Number(number);
     number = number.toFixed(2);
     var n1, n2;
@@ -68,92 +161,6 @@ class Calc extends React.Component {
     n1 = n1[0].replace(/(\d)(?=(\d\d)+\d$)/g, "$1,");
     num = n2 ? n1 + "." + n2 : n1;
     return num;
-  }
-
-  getGrossAnnualSalary() {
-    //return <h5>Annual Gross Salary :<b>₹ {this.formatIndian(Number(this.state.basic) + Number(this.state.hra) + Number(this.state.other))}</b></h5>
-    return (
-      Number(this.state.basic) +
-      Number(this.state.hra) +
-      Number(this.state.other)
-    );
-  }
-
-  getEmployeePF() {
-    return Number((12.0 / 100.0) * this.state.basic);
-  }
-
-  calculateSlabTax(remaining, slab_range, tax_rate) {
-    if (remaining > slab_range) return slab_range * (tax_rate / 100.0);
-    else return remaining * (tax_rate / 100.0);
-  }
-
-  calculateNewSchemeTax() {
-    let totaltaxable = this.getGrossAnnualSalary();
-
-    //No tax upto 12L - Full rebate
-    if (totaltaxable <= 1200000) totaltaxable = 0;
-
-    //Standard Deduction of 75,000
-    totaltaxable = totaltaxable - 75000.0;
-
-    let slab1 = this.calculateSlabTax(totaltaxable, 400000, 0);
-    let rem1 = totaltaxable - 400000;
-    if (rem1 <= 0) rem1 = 0;
-
-    let slab2 = this.calculateSlabTax(rem1, 400000, 5);
-    let rem2 = rem1 - 400000;
-    if (rem2 <= 0) rem2 = 0;
-
-    let slab3 = this.calculateSlabTax(rem2, 400000, 10);
-    let rem3 = rem2 - 400000;
-    if (rem3 <= 0) rem3 = 0;
-
-    let slab4 = this.calculateSlabTax(rem3, 400000, 15);
-    let rem4 = rem3 - 400000;
-    if (rem4 <= 0) rem4 = 0;
-
-    let slab5 = this.calculateSlabTax(rem4, 400000, 20);
-    let rem5 = rem4 - 400000;
-    if (rem5 <= 0) rem5 = 0;
-
-    let slab6 = this.calculateSlabTax(rem5, 400000, 25);
-    let rem6 = rem5 - 400000;
-    if (rem6 <= 0) rem6 = 0;
-
-    let slab7 = this.calculateSlabTax(rem6, rem6, 30);
-
-    let cess =
-      (4.0 / 100.0) * (slab1 + slab2 + slab3 + slab4 + slab5 + slab6 + slab7);
-    let final = {
-      s1: Number(slab1),
-      s2: Number(slab2),
-      s3: Number(slab3),
-      s4: Number(slab4),
-      s5: Number(slab5),
-      s6: Number(slab6),
-      s7: Number(slab7),
-      rem1: Number(rem1),
-      rem2: Number(rem2),
-      rem3: Number(rem3),
-      rem4: Number(rem4),
-      rem5: Number(rem5),
-      rem6: Number(rem6),
-      cess: Number(cess),
-      totaltax: Number(
-        slab1 + slab2 + slab3 + slab4 + slab5 + slab6 + slab7 + cess
-      ),
-    };
-
-    let oldie = JSON.stringify(this.state.newscheme);
-    let finaly = JSON.stringify(final);
-
-    if (oldie !== finaly) {
-      this.setState({
-        ...this.state,
-        newscheme: final,
-      });
-    }
   }
 
   render() {
@@ -174,11 +181,11 @@ class Calc extends React.Component {
     );
     let new_total_deductions = (
       <h5>
-        Total Deductions : <b>₹ {this.formatIndian(Number(75000))}</b>
+        Total Deductions :{" "}
+        <b>₹ {this.formatIndian(Number(this.STANDARD_DEDUCTION))}</b>
       </h5>
     );
 
-    this.calculateNewSchemeTax();
     return (
       <div>
         <Banner></Banner>
@@ -254,7 +261,11 @@ class Calc extends React.Component {
               <Form>
                 <Form.Group controlId="stdded">
                   <Form.Label>Standard Deduction</Form.Label>
-                  <Form.Control type="number" value="75000" disabled />
+                  <Form.Control
+                    type="number"
+                    value={this.STANDARD_DEDUCTION}
+                    disabled
+                  />
                   <Form.Text className="text-muted">
                     Standard deduction offered{" "}
                   </Form.Text>
@@ -299,51 +310,50 @@ class Calc extends React.Component {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>0 to ₹4,00,000</td>
-                  <td>0%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s1)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem1)}</td>
-                </tr>
-                <tr>
-                  <td>₹4,00,000 to ₹8,00,000 </td>
-                  <td>5%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s2)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem2)}</td>
-                </tr>
-                <tr>
-                  <td>₹8,00,001 to ₹12,00,000</td>
-                  <td>10%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s3)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem3)}</td>
-                </tr>
-                <tr>
-                  <td>₹12,00,001 to ₹16,00,000</td>
-                  <td>15%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s4)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem4)}</td>
-                </tr>
-                <tr>
-                  <td>₹16,00,001 to ₹20,00,000</td>
-                  <td>20%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s5)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem5)}</td>
-                </tr>
-                <tr>
-                  <td>₹20,00,001 to ₹24,00,000</td>
-                  <td>25%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s6)}</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.rem6)}</td>
-                </tr>
-                <tr>
-                  <td>Above ₹24,00,000</td>
-                  <td>30%</td>
-                  <td>₹ {this.formatIndian(this.state.newscheme.s7)}</td>
-                </tr>
+                {this.TAX_SLABS.map((slab, index) => {
+                  let lowerLimit =
+                    index === 0
+                      ? 0
+                      : this.TAX_SLABS.slice(0, index).reduce(
+                          (sum, s) => sum + s.limit,
+                          0
+                        );
+                  let upperLimit =
+                    index === this.TAX_SLABS.length - 1
+                      ? "∞"
+                      : lowerLimit + slab.limit;
+                  return (
+                    <tr key={index}>
+                      <td>
+                        {index === 0
+                          ? `0 to ₹${this.formatIndian(upperLimit)}`
+                          : index === this.TAX_SLABS.length - 1
+                          ? `Above ₹${this.formatIndian(lowerLimit)}`
+                          : `₹${this.formatIndian(
+                              lowerLimit + 1
+                            )} to ₹${this.formatIndian(upperLimit)}`}
+                      </td>
+                      <td>{slab.rate}%</td>
+                      <td>
+                        ₹{" "}
+                        {this.formatIndian(
+                          this.state.newscheme[`s${index + 1}`]
+                        )}
+                      </td>
+                      <td>
+                        ₹{" "}
+                        {this.formatIndian(
+                          this.state.newscheme[`rem${index + 1}`]
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 <tr>
                   <td>Cess</td>
                   <td>4% on Tax</td>
                   <td>₹ {this.formatIndian(this.state.newscheme.cess)}</td>
+                  <td></td>
                 </tr>
                 <tr>
                   <th colSpan="3">TOTAL TAX TO BE PAID THIS YEAR</th>
