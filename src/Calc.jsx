@@ -91,6 +91,9 @@ class Calc extends React.Component {
   calculateNewSchemeTax() {
     let totaltaxable = this.getGrossAnnualSalary();
 
+    //No tax upto 12L - Full rebate
+    if (totaltaxable <= 1200000) totaltaxable = 0;
+
     //Standard Deduction of 75,000
     totaltaxable = totaltaxable - 75000.0;
 
