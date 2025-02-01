@@ -267,7 +267,9 @@ class Calc extends React.Component {
                     value={this.getEmployeePF()}
                     disabled
                   />
-                  <Form.Text className="text-muted">PF Deducted </Form.Text>
+                  <Form.Text className="text-muted">
+                    PF @ 12% of Basic
+                  </Form.Text>
                 </Form.Group>
               </Form>
             </Col>
